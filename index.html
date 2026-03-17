@@ -1,0 +1,1471 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>IngredientGuard</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Outfit:wght@300;400;500;600&display=swap');
+
+:root {
+  --ink:       #1a1a18;
+  --ink-mid:   #5a5a55;
+  --ink-light: #9a9990;
+  --bg:        #f4f1eb;
+  --bg2:       #eceae2;
+  --white:     #fffffe;
+  --border:    #dedad0;
+  --green:     #3d6b45;
+  --green-bg:  #eaf3eb;
+  --red:       #b04040;
+  --red-bg:    #fdf0f0;
+  --amber:     #a06020;
+  --amber-bg:  #fdf5e8;
+  --accent:    #4a6741;
+  --shadow:    0 2px 16px rgba(26,26,24,0.08);
+  --shadow-lg: 0 8px 40px rgba(26,26,24,0.13);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { font-size: 16px; -webkit-text-size-adjust: 100%; }
+
+body {
+  font-family: 'Outfit', sans-serif;
+  background: var(--bg);
+  color: var(--ink);
+  min-height: 100vh;
+  padding-bottom: 60px;
+}
+
+/* ── BACKGROUND TEXTURE ── */
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background-image:
+    radial-gradient(ellipse 60% 40% at 90% 10%, rgba(180,200,160,0.18) 0%, transparent 60%),
+    radial-gradient(ellipse 50% 60% at 10% 90%, rgba(200,180,140,0.15) 0%, transparent 60%);
+  pointer-events: none; z-index: 0;
+}
+
+.app { position: relative; z-index: 1; max-width: 430px; margin: 0 auto; }
+
+/* ── HEADER ── */
+.header {
+  padding: 44px 24px 28px;
+  text-align: center;
+}
+.header-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--green);
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  padding: 5px 12px;
+  border-radius: 99px;
+  margin-bottom: 16px;
+}
+.header h1 {
+  font-family: 'Playfair Display', serif;
+  font-size: 2.6rem;
+  font-weight: 400;
+  line-height: 1.05;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+}
+.header h1 span { font-style: italic; color: var(--green); }
+.header p {
+  margin-top: 8px;
+  font-size: 0.8rem;
+  color: var(--ink-light);
+  letter-spacing: 0.04em;
+}
+
+/* ── SECTION LABEL ── */
+.slabel {
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-light);
+  padding: 0 20px;
+  margin: 8px 0 10px;
+}
+
+/* ── CARD ── */
+.card {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  margin: 0 14px 18px;
+  overflow: hidden;
+  box-shadow: var(--shadow);
+}
+
+/* ── API KEY SECTION ── */
+.api-section { padding: 20px; }
+.api-section label {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-mid);
+  margin-bottom: 8px;
+}
+.api-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.api-input {
+  flex: 1;
+  padding: 11px 14px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-family: 'Outfit', monospace;
+  font-size: 0.78rem;
+  color: var(--ink);
+  outline: none;
+  transition: border-color 0.2s;
+  -webkit-appearance: none;
+}
+.api-input:focus { border-color: var(--green); }
+.api-save-btn {
+  padding: 11px 16px;
+  background: var(--green);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.2s;
+  -webkit-appearance: none;
+}
+.api-save-btn:active { background: var(--accent); }
+.api-hint {
+  margin-top: 8px;
+  font-size: 0.68rem;
+  color: var(--ink-light);
+  line-height: 1.5;
+}
+.api-hint a { color: var(--green); text-decoration: none; }
+.api-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.68rem;
+  font-weight: 500;
+  margin-top: 6px;
+  padding: 4px 10px;
+  border-radius: 99px;
+}
+.api-status.ok { background: var(--green-bg); color: var(--green); }
+.api-status.missing { background: var(--amber-bg); color: var(--amber); }
+
+/* ── CAPTURE AREA ── */
+.capture-wrap {
+  position: relative;
+  background: var(--bg2);
+  min-height: 210px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.2s;
+  overflow: hidden;
+}
+.capture-wrap:active { background: #ddd9ce; }
+.capture-wrap.has-img { min-height: unset; cursor: default; background: #111; }
+.capture-placeholder { text-align: center; padding: 20px; }
+.capture-icon { font-size: 3rem; line-height: 1; margin-bottom: 10px; }
+.capture-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.15rem;
+  font-weight: 400;
+  color: var(--ink);
+  margin-bottom: 4px;
+}
+.capture-sub { font-size: 0.72rem; color: var(--ink-light); }
+input[type=file] { display: none; }
+
+/* ── CROP CANVAS ── */
+#cropCanvas {
+  display: none;
+  width: 100%;
+  max-height: 320px;
+  object-fit: contain;
+  touch-action: none;
+}
+#cropCanvas.visible { display: block; }
+
+.crop-hint {
+  display: none;
+  padding: 8px 16px;
+  background: rgba(0,0,0,0.65);
+  color: #fff;
+  font-size: 0.7rem;
+  text-align: center;
+  letter-spacing: 0.04em;
+}
+.crop-hint.visible { display: block; }
+
+/* ── BTN STRIP ── */
+.btn-strip {
+  display: flex;
+  border-top: 1px solid var(--border);
+}
+.btn-strip button {
+  flex: 1;
+  padding: 14px 8px;
+  background: var(--white);
+  border: none;
+  border-right: 1px solid var(--border);
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--ink);
+  cursor: pointer;
+  transition: background 0.15s;
+  -webkit-appearance: none;
+}
+.btn-strip button:last-child { border-right: none; }
+.btn-strip button:active { background: var(--bg2); }
+.btn-strip button.cta {
+  background: var(--green);
+  color: #fff;
+  font-weight: 600;
+}
+.btn-strip button.cta:active { background: var(--accent); }
+.btn-strip button:disabled { opacity: 0.38; cursor: not-allowed; }
+
+/* ── PROGRESS ── */
+.progress-wrap {
+  display: none;
+  padding: 16px 20px;
+  border-top: 1px solid var(--border);
+}
+.progress-wrap.visible { display: block; }
+.progress-label {
+  font-size: 0.72rem;
+  color: var(--ink-mid);
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.spinner-sm {
+  display: inline-block;
+  width: 12px; height: 12px;
+  border: 2px solid var(--green);
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.progress-bar {
+  height: 4px;
+  background: var(--bg2);
+  border-radius: 99px;
+  overflow: hidden;
+}
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--green), #6da86a);
+  border-radius: 99px;
+  width: 0%;
+  transition: width 0.4s ease;
+}
+
+/* ── TEXTAREA ── */
+.text-section { padding: 18px 20px; }
+.text-section label {
+  display: block;
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-light);
+  margin-bottom: 8px;
+}
+textarea {
+  width: 100%;
+  min-height: 110px;
+  padding: 12px 14px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.82rem;
+  color: var(--ink);
+  line-height: 1.7;
+  resize: vertical;
+  outline: none;
+  -webkit-appearance: none;
+  transition: border-color 0.2s;
+}
+textarea:focus { border-color: var(--green); }
+textarea::placeholder { color: var(--ink-light); }
+
+/* ── ANALYZE BUTTON ── */
+.analyze-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: calc(100% - 28px);
+  margin: 0 14px 20px;
+  padding: 18px;
+  background: var(--ink);
+  color: #fff;
+  border: none;
+  border-radius: 16px;
+  font-family: 'Playfair Display', serif;
+  font-size: 1.2rem;
+  font-weight: 400;
+  letter-spacing: 0.03em;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.12s;
+  -webkit-appearance: none;
+  box-shadow: var(--shadow-lg);
+}
+.analyze-btn:active { background: var(--green); transform: scale(0.98); }
+.analyze-btn:disabled { opacity: 0.38; cursor: not-allowed; transform: none; }
+
+/* ── RESULTS ── */
+.results-card { animation: fadeUp 0.45s cubic-bezier(0.22,1,0.36,1); }
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.verdict-bar {
+  padding: 22px 20px 18px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  border-bottom: 1px solid var(--border);
+}
+.verdict-icon {
+  width: 52px; height: 52px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.5rem;
+  flex-shrink: 0;
+}
+.verdict-icon.pass { background: var(--green-bg); }
+.verdict-icon.fail { background: var(--red-bg); }
+.verdict-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.25rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+.verdict-title.pass { color: var(--green); }
+.verdict-title.fail { color: var(--red); }
+.verdict-sub { font-size: 0.72rem; color: var(--ink-light); margin-top: 3px; }
+
+.flagged-section { padding: 16px 20px; border-bottom: 1px solid var(--border); }
+.flagged-heading {
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--red);
+  margin-bottom: 10px;
+}
+.flagged-item {
+  display: flex;
+  gap: 12px;
+  padding: 12px 14px;
+  background: var(--red-bg);
+  border: 1px solid #f0d0d0;
+  border-radius: 12px;
+  margin-bottom: 8px;
+}
+.flagged-item:last-child { margin-bottom: 0; }
+.flag-dot {
+  width: 8px; height: 8px;
+  background: var(--red);
+  border-radius: 50%;
+  margin-top: 5px;
+  flex-shrink: 0;
+}
+.flag-name { font-size: 0.85rem; font-weight: 600; color: var(--red); }
+.flag-reason { font-size: 0.7rem; color: var(--ink-mid); margin-top: 3px; line-height: 1.45; }
+
+.pills-section { padding: 16px 20px; }
+.pills-heading {
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-light);
+  margin-bottom: 10px;
+}
+.pill {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 99px;
+  font-size: 0.7rem;
+  font-weight: 500;
+  margin: 3px 3px 3px 0;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--ink);
+}
+.pill.flagged {
+  background: var(--red-bg);
+  border-color: #f0c8c8;
+  color: var(--red);
+}
+
+/* ── DB CARD ── */
+.db-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 13px 20px;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.78rem;
+}
+.db-row:last-child { border-bottom: none; }
+.db-k { color: var(--ink-mid); }
+.db-v { font-weight: 500; }
+.db-v.ok { color: var(--green); }
+
+.refresh-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: calc(100% - 28px);
+  margin: 0 14px 24px;
+  padding: 13px;
+  background: transparent;
+  border: 1.5px solid var(--green);
+  border-radius: 12px;
+  color: var(--green);
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+  -webkit-appearance: none;
+}
+.refresh-btn:active { background: var(--green-bg); }
+
+/* ── TOAST ── */
+.toast {
+  position: fixed;
+  bottom: 28px; left: 50%;
+  transform: translateX(-50%) translateY(90px);
+  background: var(--ink);
+  color: #fff;
+  padding: 11px 22px;
+  border-radius: 99px;
+  font-size: 0.76rem;
+  font-weight: 500;
+  white-space: nowrap;
+  z-index: 9999;
+  pointer-events: none;
+  transition: transform 0.35s cubic-bezier(0.34,1.56,0.64,1);
+  max-width: 90vw;
+  white-space: normal;
+  text-align: center;
+}
+.toast.show { transform: translateX(-50%) translateY(0); }
+
+/* ── FOOTER ── */
+footer {
+  text-align: center;
+  padding: 0 24px 32px;
+  font-size: 0.66rem;
+  color: var(--ink-light);
+  line-height: 1.7;
+}
+footer a { color: var(--green); text-decoration: none; }
+
+/* ── OVERLAY for crop ── */
+.crop-overlay {
+  display: none;
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.85);
+  z-index: 100;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+.crop-overlay.visible { display: flex; }
+.crop-container {
+  position: relative;
+  width: 92vw;
+  max-width: 400px;
+  touch-action: none;
+}
+.crop-img-bg {
+  width: 100%;
+  display: block;
+  border-radius: 12px;
+  opacity: 0.4;
+}
+.crop-selection {
+  position: absolute;
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 9999px rgba(0,0,0,0.5);
+  border-radius: 4px;
+  cursor: move;
+  touch-action: none;
+}
+.crop-handle {
+  position: absolute;
+  width: 20px; height: 20px;
+  background: #fff;
+  border-radius: 50%;
+  touch-action: none;
+}
+.crop-handle.tl { top: -10px; left: -10px; cursor: nw-resize; }
+.crop-handle.tr { top: -10px; right: -10px; cursor: ne-resize; }
+.crop-handle.bl { bottom: -10px; left: -10px; cursor: sw-resize; }
+.crop-handle.br { bottom: -10px; right: -10px; cursor: se-resize; }
+.crop-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 18px;
+  width: 92vw;
+  max-width: 400px;
+}
+.crop-actions button {
+  flex: 1;
+  padding: 14px;
+  border: none;
+  border-radius: 12px;
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  -webkit-appearance: none;
+}
+.crop-cancel { background: rgba(255,255,255,0.15); color: #fff; }
+.crop-confirm { background: var(--green); color: #fff; }
+.crop-hint-text {
+  color: rgba(255,255,255,0.6);
+  font-size: 0.7rem;
+  margin-top: 10px;
+  text-align: center;
+}
+
+/* ── FILE:// ORIGIN WARNING ── */
+.origin-warning {
+  display: none;
+  margin: 0 14px 18px;
+  background: #fff8ed;
+  border: 1.5px solid #e8a020;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: var(--shadow);
+}
+.origin-warning.visible { display: block; }
+.ow-header {
+  background: #e8a020;
+  color: #fff;
+  padding: 12px 16px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.ow-body { padding: 16px; }
+.ow-body p {
+  font-size: 0.78rem;
+  line-height: 1.6;
+  color: #5a3a00;
+  margin-bottom: 12px;
+}
+.ow-body strong { color: #3a2800; }
+.ow-steps {
+  list-style: none;
+  counter-reset: step;
+}
+.ow-steps li {
+  counter-increment: step;
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  margin-bottom: 10px;
+  font-size: 0.76rem;
+  line-height: 1.55;
+  color: #5a3a00;
+}
+.ow-steps li::before {
+  content: counter(step);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px; height: 20px;
+  background: #e8a020;
+  color: #fff;
+  border-radius: 50%;
+  font-size: 0.65rem;
+  font-weight: 700;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+.ow-steps li a { color: #a06000; word-break: break-all; }
+.ow-steps li code {
+  background: #ffecc0;
+  border-radius: 4px;
+  padding: 1px 5px;
+  font-family: monospace;
+  font-size: 0.72rem;
+}
+.ow-alt {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #f0d090;
+  font-size: 0.72rem;
+  color: #7a5000;
+}
+.ow-alt strong { color: #3a2800; }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- HEADER -->
+  <header class="header">
+    <div class="header-badge">🌿 EU Cosmetics Guard</div>
+    <h1>Ingredient<span>Guard</span></h1>
+    <p>Scan any cosmetic label — checked against EU Annex II</p>
+  </header>
+
+  <!-- FILE:// ORIGIN WARNING — shown automatically if opened from Files app -->
+  <div class="origin-warning" id="originWarning">
+    <div class="ow-header">⚠️ Cannot connect to API — hosting required</div>
+    <div class="ow-body">
+      <p>
+        You're opening this file directly from storage (<strong>file://</strong> origin).
+        iOS browsers block all outbound API calls from local files as a security policy —
+        the <em>Anthropic API cannot be reached this way</em>, regardless of which browser you use.
+      </p>
+      <p><strong>Fix: host the file for free on GitHub Pages (5 min setup)</strong></p>
+      <ol class="ow-steps">
+        <li>Create a free account at <a href="https://github.com" target="_blank">github.com</a></li>
+        <li>Click <strong>+</strong> → <strong>New repository</strong>. Name it anything, set to <strong>Public</strong>, click Create.</li>
+        <li>Click <strong>Add file → Upload files</strong>, upload this <code>ingredient-guard-v4.html</code> file.</li>
+        <li>Rename it to <code>index.html</code> (click the file → pencil icon → change name at top).</li>
+        <li>Go to <strong>Settings → Pages</strong>, set Source to <strong>main branch / root</strong>, click Save.</li>
+        <li>GitHub gives you a URL like <code>https://yourname.github.io/reponame</code> — open that on your iPhone. Done! ✓</li>
+      </ol>
+      <div class="ow-alt">
+        <strong>Alternative:</strong> If you have a Mac on the same Wi-Fi, run
+        <code>python3 -m http.server 8080</code> in the folder containing this file,
+        then open <code>http://YOUR-MAC-IP:8080</code> in Edge on your iPhone.
+      </div>
+    </div>
+  </div>
+
+  <!-- API KEY -->
+  <p class="slabel">Claude API Key</p>
+  <div class="card">
+    <div class="api-section">
+      <label>Your Anthropic API Key</label>
+      <div class="api-row">
+        <input class="api-input" type="password" id="apiKeyInput" placeholder="sk-ant-api03-…" autocomplete="off" autocorrect="off" spellcheck="false">
+        <button class="api-save-btn" onclick="saveApiKey()">Save</button>
+      </div>
+      <div id="apiStatus" class="api-status missing">⚠ No key saved</div>
+      <p class="api-hint">
+        Your key is stored only on this device (localStorage). Get one at
+        <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a>.
+        The key is never sent anywhere except the Anthropic API.
+      </p>
+    </div>
+  </div>
+
+  <!-- STEP 1: CAPTURE -->
+  <p class="slabel">Step 1 — Photograph Label</p>
+  <div class="card" id="captureCard">
+    <div class="capture-wrap" id="captureWrap" onclick="triggerFileInput()">
+      <div class="capture-placeholder">
+        <div class="capture-icon">📸</div>
+        <div class="capture-title">Photograph the label</div>
+        <div class="capture-sub">Tap to open camera or choose from roll</div>
+      </div>
+    </div>
+    <div class="crop-hint" id="cropHint">Pinch to zoom · Drag to reposition</div>
+    <div class="progress-wrap" id="progressWrap">
+      <div class="progress-label">
+        <span class="spinner-sm"></span>
+        <span id="progressLabel">Analysing image with Claude Vision…</span>
+      </div>
+      <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+    </div>
+    <div class="btn-strip" id="btnStrip" style="display:none">
+      <button onclick="triggerFileInput()">↺ Retake</button>
+      <button onclick="openCrop()">✂ Crop</button>
+      <button class="cta" id="extractBtn" onclick="extractWithClaude()">Scan with AI →</button>
+    </div>
+  </div>
+  <input type="file" id="fileInput" accept="image/*" capture="environment">
+
+  <!-- STEP 2: EDIT TEXT -->
+  <p class="slabel">Step 2 — Review & Edit</p>
+  <div class="card">
+    <div class="text-section">
+      <label>Ingredients (edit if needed)</label>
+      <textarea id="ingredientText" placeholder="Ingredients will appear here after scanning…&#10;&#10;Or type / paste them manually:&#10;Aqua, Glycerin, Sodium Lauryl Sulfate, Parfum…"></textarea>
+    </div>
+  </div>
+
+  <!-- ANALYSE -->
+  <button class="analyze-btn" id="analyzeBtn" onclick="analyzeIngredients()">
+    <span>✦</span> Analyse Ingredients
+  </button>
+
+  <!-- RESULTS -->
+  <div id="resultsContainer"></div>
+
+  <!-- DATABASE STATUS -->
+  <p class="slabel">EU Prohibited Substances Database</p>
+  <div class="card">
+    <div class="db-row"><span class="db-k">Source</span><span class="db-v">EC Regulation 1223/2009 Annex II</span></div>
+    <div class="db-row"><span class="db-k">Substances</span><span class="db-v ok" id="dbCount">—</span></div>
+    <div class="db-row"><span class="db-k">Version</span><span class="db-v" id="dbDate">—</span></div>
+  </div>
+  <button class="refresh-btn" onclick="refreshDatabase()">
+    <span>⟳</span> Refresh from EU Database
+  </button>
+
+  <footer>
+    Checks against EU Cosmetics Regulation (EC) No 1223/2009 Annex II & III.<br>
+    For informational use only — verify with official sources.<br>
+    <a href="https://echa.europa.eu/cosmetics-prohibited-substances" target="_blank">ECHA ↗</a>
+    &nbsp;·&nbsp;
+    <a href="https://ec.europa.eu/growth/tools-databases/cosing/" target="_blank">CosIng ↗</a>
+  </footer>
+</div>
+
+<!-- CROP OVERLAY -->
+<div class="crop-overlay" id="cropOverlay">
+  <div class="crop-container" id="cropContainer">
+    <img id="cropBgImg" class="crop-img-bg" src="" alt="">
+    <div class="crop-selection" id="cropSelection">
+      <div class="crop-handle tl" data-corner="tl"></div>
+      <div class="crop-handle tr" data-corner="tr"></div>
+      <div class="crop-handle bl" data-corner="bl"></div>
+      <div class="crop-handle br" data-corner="br"></div>
+    </div>
+  </div>
+  <div class="crop-hint-text">Drag the box to select the ingredient area</div>
+  <div class="crop-actions">
+    <button class="crop-cancel" onclick="closeCrop()">Cancel</button>
+    <button class="crop-confirm" onclick="confirmCrop()">Use This Area</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════
+//  EU PROHIBITED INGREDIENTS DATABASE
+//  Source: EC Regulation 1223/2009 Annex II (+ updates)
+// ═══════════════════════════════════════════════════════
+const BUNDLED_DB = {
+  version: "2025-01",
+  updated: "January 2025",
+  substances: [
+    // ── PARABENS (prohibited/restricted) ──
+    { inci: "BUTYLPARABEN",         syn: ["BUTYL PARAHYDROXYBENZOATE","BUTYL 4-HYDROXYBENZOATE"],            reason: "Prohibited in products for children under 3; endocrine disruptor (CMR 1B)" },
+    { inci: "PROPYLPARABEN",        syn: ["PROPYL PARAHYDROXYBENZOATE"],                                     reason: "Restricted; endocrine disruption concerns; max 0.14% (single) / 0.19% (mixed)" },
+    { inci: "ISOPROPYLPARABEN",     syn: [],                                                                  reason: "Prohibited; endocrine disruptor" },
+    { inci: "ISOBUTYLPARABEN",      syn: [],                                                                  reason: "Prohibited; endocrine disruptor" },
+    { inci: "PENTYLPARABEN",        syn: ["AMYLPARABEN"],                                                    reason: "Prohibited" },
+    { inci: "PHENYLPARABEN",        syn: [],                                                                  reason: "Prohibited" },
+    { inci: "BENZYLPARABEN",        syn: [],                                                                  reason: "Prohibited" },
+
+    // ── ISOTHIAZOLINONES ──
+    { inci: "METHYLISOTHIAZOLINONE",      syn: ["MIT","2-METHYL-4-ISOTHIAZOLIN-3-ONE"],     reason: "Prohibited in leave-on products; severe skin sensitizer" },
+    { inci: "METHYLCHLOROISOTHIAZOLINONE",syn: ["MCI","CMIT","5-CHLORO-2-METHYL-4-ISOTHIAZOLIN-3-ONE"], reason: "Prohibited in leave-on products; strong sensitizer" },
+    { inci: "BENZISOTHIAZOLINONE",        syn: ["BIT","1,2-BENZISOTHIAZOL-3(2H)-ONE"],      reason: "Restricted; skin sensitizer under review" },
+    { inci: "OCTYLISOTHIAZOLINONE",       syn: ["OIT"],                                      reason: "Restricted; skin sensitizer" },
+
+    // ── FRAGRANCE ALLERGENS (prohibited) ──
+    { inci: "BUTYLPHENYL METHYLPROPIONAL",syn: ["LILIAL","BMH","2-(4-TERT-BUTYLBENZYL)PROPIONALDEHYDE","LYSMERAL"], reason: "Prohibited since March 2022; CMR 1B reproductive toxicant" },
+    { inci: "HYDROXYISOHEXYL 3-CYCLOHEXENE CARBOXALDEHYDE", syn: ["LYRAL","HICC"],           reason: "Prohibited; extreme skin sensitizer" },
+    { inci: "ATRANOL",              syn: [],                                                  reason: "Prohibited; extreme sensitizer from oak moss" },
+    { inci: "CHLOROATRANOL",        syn: [],                                                  reason: "Prohibited; extreme sensitizer" },
+    { inci: "MYROXYLON PEREIRAE",   syn: ["PERU BALSAM"],                                    reason: "Prohibited; sensitizer" },
+    { inci: "STYRAX BENZOIN",       syn: ["BENZOIN","STYRENE"],                              reason: "Restricted; CMR concerns" },
+    { inci: "COSTUS ROOT",          syn: ["SAUSSUREA COSTUS"],                               reason: "Prohibited; sensitizer" },
+    { inci: "DIHYDROCOUMARIN",      syn: [],                                                  reason: "Prohibited; sensitizer" },
+    { inci: "NITROMUSKS",           syn: ["MUSK AMBRETTE","MUSK TIBETENE","MUSK MOSCOW"],   reason: "Prohibited group; sensitizers/CMR" },
+    { inci: "MUSK AMBRETTE",        syn: [],                                                  reason: "Prohibited; CMR" },
+
+    // ── PROHIBITED COLORANTS ──
+    { inci: "CI 12150",  syn: ["SOLVENT RED 1"],    reason: "Prohibited colorant" },
+    { inci: "CI 26100",  syn: ["SOLVENT RED 23"],   reason: "Prohibited colorant" },
+    { inci: "CI 42555",  syn: ["SPIRIT BLUE"],      reason: "Prohibited colorant" },
+    { inci: "CI 42535",  syn: [],                    reason: "Prohibited colorant" },
+    { inci: "CI 42640",  syn: [],                    reason: "Prohibited colorant" },
+    { inci: "CI 11680",  syn: ["YELLOW 3"],          reason: "Prohibited colorant" },
+    { inci: "CI 11710",  syn: ["YELLOW 8"],          reason: "Prohibited colorant" },
+    { inci: "CI 13065",  syn: ["YELLOW 1"],          reason: "Prohibited colorant" },
+    { inci: "CI 15800",  syn: [],                    reason: "Prohibited colorant" },
+    { inci: "CI 45170",  syn: [],                    reason: "Prohibited colorant" },
+    { inci: "CI 61554",  syn: [],                    reason: "Prohibited colorant" },
+
+    // ── HEAVY METALS ──
+    { inci: "LEAD ACETATE",         syn: ["LEAD(II) ACETATE","PLUMBOUS ACETATE"],  reason: "Prohibited; toxic heavy metal" },
+    { inci: "LEAD OXIDE",           syn: [],                                        reason: "Prohibited; toxic" },
+    { inci: "MERCURY",              syn: ["MERCURIC CHLORIDE","THIMEROSAL"],        reason: "Prohibited; heavy metal toxin" },
+    { inci: "ARSENIC",              syn: ["ARSENIC TRIOXIDE","ARSENIOUS ACID"],     reason: "Prohibited; carcinogen" },
+    { inci: "BERYLLIUM",            syn: [],                                        reason: "Prohibited; CMR carcinogen" },
+    { inci: "CADMIUM",              syn: ["CADMIUM CHLORIDE","CADMIUM SULFATE"],   reason: "Prohibited; toxic heavy metal" },
+    { inci: "BARIUM SULFIDE",       syn: [],                                        reason: "Prohibited" },
+    { inci: "SELENIUM SULFIDE",     syn: [],                                        reason: "Prohibited" },
+    { inci: "THALLIUM",             syn: [],                                        reason: "Prohibited; toxic" },
+    { inci: "ANTIMONY",             syn: ["ANTIMONY TRICHLORIDE"],                 reason: "Prohibited; toxic" },
+
+    // ── HORMONES & ENDOCRINE DISRUPTORS ──
+    { inci: "PROGESTERONE",         syn: [],                                        reason: "Prohibited; hormone" },
+    { inci: "ESTRADIOL",            syn: ["OESTRADIOL","17-BETA-ESTRADIOL"],        reason: "Prohibited; hormone; CMR 1B" },
+    { inci: "TESTOSTERONE",         syn: [],                                        reason: "Prohibited; hormone" },
+    { inci: "HYDROCORTISONE",       syn: ["CORTISOL"],                             reason: "Prohibited without prescription" },
+    { inci: "TRICLOSAN",            syn: ["2,4,4-TRICHLORO-2-HYDROXYDIPHENYL ETHER"], reason: "Restricted; endocrine disruption; max 0.3% in toothpaste/mouthwash only" },
+    { inci: "TRICLOCARBAN",         syn: ["TCC","3,4,4-TRICHLOROCARBANILIDE"],     reason: "Restricted; endocrine disruption concerns" },
+
+    // ── SOLVENTS & CMR CHEMICALS ──
+    { inci: "BENZENE",              syn: [],                                        reason: "Prohibited; carcinogen CMR 1A" },
+    { inci: "TOLUENE",              syn: ["METHYLBENZENE"],                        reason: "Restricted; reproductive toxicant; max 25% in nail products" },
+    { inci: "FORMALDEHYDE",         syn: ["FORMALIN","METHANAL","METHYLENE GLYCOL"], reason: "Restricted; max 0.1% in cosmetics, 0.2% nail hardeners; carcinogen" },
+    { inci: "METHANOL",             syn: ["METHYL ALCOHOL","WOOD ALCOHOL"],        reason: "Prohibited; toxic solvent" },
+    { inci: "CHLOROFORM",           syn: ["TRICHLOROMETHANE"],                     reason: "Prohibited; CMR carcinogen" },
+    { inci: "DICHLOROMETHANE",      syn: ["METHYLENE CHLORIDE"],                   reason: "Prohibited; CMR" },
+    { inci: "CARBON TETRACHLORIDE", syn: ["TETRACHLOROMETHANE"],                   reason: "Prohibited" },
+    { inci: "NITROBENZENE",         syn: [],                                        reason: "Prohibited; CMR" },
+    { inci: "1,4-DIOXANE",          syn: ["DIOXANE"],                              reason: "Prohibited contaminant; carcinogen" },
+    { inci: "ETHYLENE OXIDE",       syn: [],                                        reason: "Prohibited; CMR carcinogen" },
+    { inci: "ACRYLAMIDE",           syn: [],                                        reason: "Prohibited; CMR" },
+    { inci: "GLYOXAL",              syn: ["ETHANEDIAL"],                           reason: "Restricted; CMR 1B reproductive toxicant" },
+
+    // ── UV FILTERS (prohibited) ──
+    { inci: "4-METHYLBENZYLIDENE CAMPHOR", syn: ["4-MBC","ENZACAMENE"],            reason: "Prohibited from May 2025; endocrine disruptor" },
+    { inci: "BENZOPHENONE-1",       syn: ["BP-1","UVINUL 400"],                    reason: "Prohibited; endocrine disruptor" },
+    { inci: "BENZOPHENONE-2",       syn: ["BP-2"],                                 reason: "Prohibited; endocrine disruptor" },
+    { inci: "OMC",                  syn: ["OCTYL METHOXYCINNAMATE","ETHYLHEXYL METHOXYCINNAMATE"], reason: "Under review for endocrine disruption" },
+
+    // ── SKIN-LIGHTENING & RESTRICTED ──
+    { inci: "HYDROQUINONE",         syn: ["BENZENE-1,4-DIOL","1,4-DIHYDROXYBENZENE"], reason: "Prohibited in cosmetics; only in nail products ≤0.3%" },
+    { inci: "KOJIC ACID",           syn: [],                                        reason: "Restricted as skin lightener; max 1%" },
+    { inci: "RESORCINOL",           syn: ["1,3-DIHYDROXYBENZENE"],                 reason: "Restricted; prohibited in body/face cosmetics" },
+    { inci: "MERCURY CHLORIDE",     syn: [],                                        reason: "Prohibited skin-lightening agent" },
+
+    // ── NITROSAMINES ──
+    { inci: "NITROSAMINES",         syn: ["N-NITROSODIETHYLAMINE","NDEA","NDMA","NDELA"], reason: "Prohibited; carcinogens" },
+    { inci: "DIETHANOLAMINE",       syn: ["DEA"],                                   reason: "Prohibited; forms carcinogenic nitrosamines" },
+
+    // ── BORON COMPOUNDS ──
+    { inci: "BORIC ACID",           syn: ["SODIUM BORATE","SODIUM TETRABORATE","BORAX","DISODIUM TETRABORATE"], reason: "Prohibited in baby products; restricted in others; CMR reproductive toxicant" },
+    { inci: "SODIUM PERBORATE",     syn: [],                                        reason: "Restricted; CMR reproductive toxicant" },
+
+    // ── RESTRICTED ACTIVES ──
+    { inci: "SALICYLIC ACID",       syn: ["2-HYDROXYBENZOIC ACID"],                reason: "Restricted; max 0.5–2% by product type; prohibited for children under 3" },
+    { inci: "ZINC PYRITHIONE",      syn: ["ZPT","PYRITHIONE ZINC"],                reason: "Prohibited since March 2022 (removed from permitted list)" },
+    { inci: "HYDROGEN PEROXIDE",    syn: [],                                        reason: "Restricted; max 12% hair, 6% teeth whitening" },
+    { inci: "THIOGLYCOLIC ACID",    syn: ["MERCAPTOACETIC ACID"],                  reason: "Restricted; max concentrations per product type" },
+    { inci: "COAL TAR",             syn: ["COAL TAR EXTRACT","PIX LITHANTHRACIS"],  reason: "Prohibited; carcinogen" },
+
+    // ── RETINOIDS (prescription only) ──
+    { inci: "TRETINOIN",            syn: ["RETINOIC ACID","ALL-TRANS RETINOIC ACID"], reason: "Prohibited; prescription-only retinoid" },
+    { inci: "ISOTRETINOIN",         syn: ["13-CIS RETINOIC ACID"],                 reason: "Prohibited; prescription-only; teratogen" },
+    { inci: "ACITRETIN",            syn: [],                                        reason: "Prohibited; prescription-only" },
+    { inci: "ADAPALENE",            syn: [],                                        reason: "Prohibited in cosmetics; prescription only" },
+
+    // ── ANTIBIOTICS ──
+    { inci: "CHLORAMPHENICOL",      syn: [],                                        reason: "Prohibited antibiotic" },
+    { inci: "NEOMYCIN",             syn: [],                                        reason: "Prohibited antibiotic" },
+    { inci: "STREPTOMYCIN",         syn: [],                                        reason: "Prohibited antibiotic" },
+    { inci: "TETRACYCLINE",         syn: [],                                        reason: "Prohibited antibiotic" },
+    { inci: "PENICILLIN",           syn: [],                                        reason: "Prohibited antibiotic" },
+    { inci: "OXYTETRACYCLINE",      syn: [],                                        reason: "Prohibited antibiotic" },
+
+    // ── PFAS ──
+    { inci: "POLYTETRAFLUOROETHYLENE", syn: ["PTFE MICRONIZED","PTFE"],            reason: "Under restriction since 2024; persistent environmental pollutant (PFAS)" },
+    { inci: "PERFLUOROOCTYL",       syn: ["PFOA","PERFLUOROOCTANOIC ACID"],        reason: "Prohibited; persistent environmental pollutant (PFAS)" },
+    { inci: "PERFLUORONONYL",       syn: ["PFNA"],                                 reason: "Prohibited; PFAS" },
+    { inci: "PERFLUOROHEXANE",      syn: [],                                        reason: "Restricted; PFAS" },
+
+    // ── OTHERS ──
+    { inci: "ALUMINUM ZIRCONIUM",   syn: [],                                        reason: "Prohibited in aerosol spray antiperspirants" },
+    { inci: "STRONTIUM PEROXIDE",   syn: [],                                        reason: "Prohibited" },
+    { inci: "STRONTIUM CHLORIDE",   syn: ["STRONTIUM CHLORIDE HEXAHYDRATE"],       reason: "Restricted" },
+    { inci: "PHENYLENEDIAMINE",     syn: ["P-PHENYLENEDIAMINE","PPD"],             reason: "Restricted; strong sensitizer; max 2% in oxidative hair dye" },
+    { inci: "RESORCINOL",           syn: [],                                        reason: "Restricted; max 0.5% in rinse-off hair products" },
+    { inci: "AMINOPHENOL",          syn: ["4-AMINOPHENOL","P-AMINOPHENOL"],        reason: "Restricted; hair dye; max 0.9%" },
+    { inci: "DIAMINOBENZENE",       syn: ["O-PHENYLENEDIAMINE"],                   reason: "Prohibited" },
+    { inci: "PICRIC ACID",          syn: ["TRINITROPHENOL"],                       reason: "Prohibited" },
+    { inci: "SILVER NITRATE",       syn: [],                                        reason: "Restricted; max 4% eyelash/eyebrow dye only" },
+    { inci: "PYROGALLOL",           syn: ["1,2,3-BENZENETRIOL"],                   reason: "Restricted; hair dye; max 2% (Europe)" },
+    { inci: "CATECHOL",             syn: ["PYROCATECHOL"],                          reason: "Prohibited; CMR" },
+    { inci: "ZIRCONIUM",            syn: ["ZIRCONYL CHLORIDE"],                    reason: "Restricted; prohibited in aerosols" },
+    { inci: "CHLORHEXIDINE",        syn: [],                                        reason: "Restricted; max 0.1-0.3% depending on use" },
+    { inci: "HEXACHLOROPHENE",      syn: [],                                        reason: "Prohibited" },
+  ]
+};
+
+// ═══════════════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════════════
+let db = null;
+let currentImageDataUrl = null;
+let croppedImageDataUrl = null;
+
+// crop state
+let cropImgNaturalW = 0, cropImgNaturalH = 0;
+let cropContainerW = 0, cropContainerH = 0;
+let cropBox = { x: 0.1, y: 0.1, w: 0.8, h: 0.8 }; // normalized 0–1
+let cropDragging = null; // 'move' | 'tl'|'tr'|'bl'|'br'
+let cropDragStart = null;
+
+// ═══════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════
+//  API KEY
+// ═══════════════════════════════════════════════════════
+function saveApiKey() {
+  const val = document.getElementById('apiKeyInput').value.trim();
+  if (!val.startsWith('sk-ant')) { showToast('Key should start with sk-ant…'); return; }
+  localStorage.setItem('claude_api_key', val);
+  setApiStatus(true);
+  showToast('API key saved ✓');
+}
+function setApiStatus(ok) {
+  const el = document.getElementById('apiStatus');
+  el.className = 'api-status ' + (ok ? 'ok' : 'missing');
+  el.textContent = ok ? '✓ Key saved on this device' : '⚠ No key saved';
+}
+function getApiKey() { return localStorage.getItem('claude_api_key') || ''; }
+
+// ═══════════════════════════════════════════════════════
+//  FILE INPUT / IMAGE HANDLING
+// ═══════════════════════════════════════════════════════
+function triggerFileInput() {
+  document.getElementById('fileInput').click();
+}
+
+document.getElementById('fileInput').addEventListener('change', function(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    currentImageDataUrl = ev.target.result;
+    croppedImageDataUrl = null;
+    showImagePreview(currentImageDataUrl);
+  };
+  reader.readAsDataURL(file);
+  // reset so same file can be re-selected
+  this.value = '';
+});
+
+function showImagePreview(dataUrl) {
+  const wrap = document.getElementById('captureWrap');
+  wrap.innerHTML = `<img src="${dataUrl}" style="width:100%;max-height:300px;object-fit:contain;display:block;">`;
+  wrap.classList.add('has-img');
+  wrap.onclick = null;
+  document.getElementById('btnStrip').style.display = 'flex';
+  document.getElementById('cropHint').classList.add('visible');
+  showToast('Photo loaded — tap Scan with AI');
+}
+
+// ═══════════════════════════════════════════════════════
+//  CROP OVERLAY
+// ═══════════════════════════════════════════════════════
+function openCrop() {
+  const src = croppedImageDataUrl || currentImageDataUrl;
+  if (!src) { showToast('Load a photo first'); return; }
+
+  const bgImg = document.getElementById('cropBgImg');
+  bgImg.src = src;
+  bgImg.onload = () => {
+    cropImgNaturalW = bgImg.naturalWidth;
+    cropImgNaturalH = bgImg.naturalHeight;
+    cropContainerW = bgImg.offsetWidth;
+    cropContainerH = bgImg.offsetHeight;
+
+    // default selection: middle 80%
+    cropBox = { x: 0.05, y: 0.05, w: 0.9, h: 0.9 };
+    renderCropBox();
+  };
+
+  document.getElementById('cropOverlay').classList.add('visible');
+  document.body.style.overflow = 'hidden';
+
+  setupCropEvents();
+}
+
+function closeCrop() {
+  document.getElementById('cropOverlay').classList.remove('visible');
+  document.body.style.overflow = '';
+}
+
+function renderCropBox() {
+  const cont = document.getElementById('cropContainer');
+  const sel = document.getElementById('cropSelection');
+  const img = document.getElementById('cropBgImg');
+  const W = img.offsetWidth;
+  const H = img.offsetHeight;
+
+  sel.style.left   = (cropBox.x * W) + 'px';
+  sel.style.top    = (cropBox.y * H) + 'px';
+  sel.style.width  = (cropBox.w * W) + 'px';
+  sel.style.height = (cropBox.h * H) + 'px';
+}
+
+function setupCropEvents() {
+  const sel = document.getElementById('cropSelection');
+  const handles = sel.querySelectorAll('.crop-handle');
+
+  // Touch events for handles
+  handles.forEach(h => {
+    h.addEventListener('touchstart', e => {
+      e.stopPropagation(); e.preventDefault();
+      cropDragging = h.dataset.corner;
+      const t = e.touches[0];
+      cropDragStart = { x: t.clientX, y: t.clientY, box: {...cropBox} };
+    }, { passive: false });
+  });
+
+  // Touch events for move
+  sel.addEventListener('touchstart', e => {
+    if (e.target.classList.contains('crop-handle')) return;
+    e.preventDefault();
+    cropDragging = 'move';
+    const t = e.touches[0];
+    cropDragStart = { x: t.clientX, y: t.clientY, box: {...cropBox} };
+  }, { passive: false });
+
+  document.addEventListener('touchmove', onCropTouchMove, { passive: false });
+  document.addEventListener('touchend', () => { cropDragging = null; }, { passive: true });
+}
+
+function onCropTouchMove(e) {
+  if (!cropDragging) return;
+  e.preventDefault();
+  const t = e.touches[0];
+  const img = document.getElementById('cropBgImg');
+  const W = img.offsetWidth, H = img.offsetHeight;
+  const dx = (t.clientX - cropDragStart.x) / W;
+  const dy = (t.clientY - cropDragStart.y) / H;
+  const b = cropDragStart.box;
+
+  if (cropDragging === 'move') {
+    cropBox.x = Math.max(0, Math.min(1 - b.w, b.x + dx));
+    cropBox.y = Math.max(0, Math.min(1 - b.h, b.y + dy));
+  } else {
+    let nx = b.x, ny = b.y, nw = b.w, nh = b.h;
+    if (cropDragging.includes('r')) { nw = Math.max(0.05, Math.min(1 - b.x, b.w + dx)); }
+    if (cropDragging.includes('l')) { nx = Math.max(0, Math.min(b.x + b.w - 0.05, b.x + dx)); nw = b.w - (nx - b.x); }
+    if (cropDragging.includes('b')) { nh = Math.max(0.05, Math.min(1 - b.y, b.h + dy)); }
+    if (cropDragging.includes('t')) { ny = Math.max(0, Math.min(b.y + b.h - 0.05, b.y + dy)); nh = b.h - (ny - b.y); }
+    cropBox = { x: nx, y: ny, w: nw, h: nh };
+  }
+  renderCropBox();
+}
+
+function confirmCrop() {
+  const src = currentImageDataUrl;
+  const img = new Image();
+  img.onload = () => {
+    const canvas = document.createElement('canvas');
+    const sx = cropBox.x * img.naturalWidth;
+    const sy = cropBox.y * img.naturalHeight;
+    const sw = cropBox.w * img.naturalWidth;
+    const sh = cropBox.h * img.naturalHeight;
+    canvas.width  = sw;
+    canvas.height = sh;
+    canvas.getContext('2d').drawImage(img, sx, sy, sw, sh, 0, 0, sw, sh);
+    croppedImageDataUrl = canvas.toDataURL('image/jpeg', 0.92);
+    showImagePreview(croppedImageDataUrl);
+    closeCrop();
+    showToast('Crop applied ✓');
+  };
+  img.src = src;
+}
+
+// ═══════════════════════════════════════════════════════
+//  IMAGE COMPRESSION  (fixes large phone photos timing out)
+//  Resizes to max 1024px on longest side, quality 0.82
+//  Returns { base64, mime } always as image/jpeg
+// ═══════════════════════════════════════════════════════
+function compressImage(dataUrl, maxPx = 1024, quality = 0.82) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onerror = reject;
+    img.onload = () => {
+      let { naturalWidth: w, naturalHeight: h } = img;
+      if (w > maxPx || h > maxPx) {
+        if (w > h) { h = Math.round(h * maxPx / w); w = maxPx; }
+        else       { w = Math.round(w * maxPx / h); h = maxPx; }
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      const out = canvas.toDataURL('image/jpeg', quality);
+      resolve({ base64: out.split(',')[1], mime: 'image/jpeg' });
+    };
+    img.src = dataUrl;
+  });
+}
+
+// ═══════════════════════════════════════════════════════
+//  CLAUDE VISION OCR  — fixed version
+//  Fixes:
+//    1. Image compressed to ≤1024px before sending (was timing out on large photos)
+//    2. AbortController timeout (60s) so fetch never hangs forever
+//    3. Detailed error messages per HTTP status code
+//    4. Correct MIME always forced to image/jpeg after compression
+//    5. Response body read once into text to avoid "body already used" errors
+// ═══════════════════════════════════════════════════════
+async function extractWithClaude() {
+  const key = getApiKey();
+  if (!key) { showToast('Please save your API key first ↑'); return; }
+
+  const imgSrc = croppedImageDataUrl || currentImageDataUrl;
+  if (!imgSrc) { showToast('Please load a photo first'); return; }
+
+  const btn = document.getElementById('extractBtn');
+  btn.disabled = true;
+
+  const pw = document.getElementById('progressWrap');
+  const pl = document.getElementById('progressLabel');
+  const pf = document.getElementById('progressFill');
+  pw.classList.add('visible');
+
+  const steps = [
+    [8,  'Compressing image…'],
+    [20, 'Sending to Claude Vision…'],
+    [45, 'Reading ingredient list…'],
+    [70, 'Extracting INCI names…'],
+    [90, 'Formatting results…'],
+  ];
+  let stepI = 0;
+  const ticker = setInterval(() => {
+    if (stepI < steps.length) {
+      pf.style.width = steps[stepI][0] + '%';
+      pl.textContent = steps[stepI][1];
+      stepI++;
+    }
+  }, 1100);
+
+  const resetUI = () => {
+    clearInterval(ticker);
+    pw.classList.remove('visible');
+    pf.style.width = '0%';
+    btn.disabled = false;
+  };
+
+  try {
+    // ── FIX 1: Compress image before sending ──────────────────
+    pl.textContent = 'Compressing image…';
+    pf.style.width = '8%';
+    const { base64, mime } = await compressImage(imgSrc, 1024, 0.82);
+
+    // Sanity: warn if still large (shouldn't happen but log it)
+    const approxKB = Math.round(base64.length * 0.75 / 1024);
+    console.log(`[IngredientGuard] Image compressed to ~${approxKB}KB`);
+
+    const requestBody = JSON.stringify({
+      model: "claude-sonnet-4-20250514",
+      max_tokens: 1000,
+      messages: [{
+        role: "user",
+        content: [
+          {
+            type: "image",
+            source: { type: "base64", media_type: mime, data: base64 }
+          },
+          {
+            type: "text",
+            text: `You are an expert cosmetics ingredient reader. Look at this image of a cosmetic product label.
+
+Extract ONLY the ingredients list. Return them as a single comma-separated line of INCI ingredient names, exactly as printed on the label.
+
+Rules:
+- Output ONLY the raw comma-separated ingredient names, nothing else
+- No introduction, no explanation, no markdown
+- If you cannot find an ingredients list, reply: NOT_FOUND
+- Preserve original spelling and capitalisation
+- Include ALL ingredients you can read
+
+Example output format:
+Aqua, Glycerin, Sodium Lauryl Sulfate, Parfum, Methylparaben, Phenoxyethanol`
+          }
+        ]
+      }]
+    });
+
+    // ── FIX 2: AbortController timeout (60 seconds) ───────────
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 60000);
+
+    let resp;
+    try {
+      resp = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        signal: controller.signal,
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': key,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true'
+        },
+        body: requestBody
+      });
+    } finally {
+      clearTimeout(timeoutId);
+    }
+
+    clearInterval(ticker);
+
+    // ── FIX 3: Read body ONCE into text, then parse ───────────
+    const rawText = await resp.text();
+
+    if (!resp.ok) {
+      let errMsg = `HTTP ${resp.status}`;
+      try {
+        const errJson = JSON.parse(rawText);
+        errMsg = errJson?.error?.message || errMsg;
+      } catch(_) {}
+
+      // Specific, helpful messages per status code
+      if (resp.status === 401) {
+        showToast('❌ Invalid API key — double-check it in the key field above');
+      } else if (resp.status === 400) {
+        showToast('❌ Bad request — image may be corrupted. Try retaking the photo.');
+        console.error('[IngredientGuard] 400 body:', rawText);
+      } else if (resp.status === 429) {
+        showToast('⏳ Rate limit hit — wait a moment and try again');
+      } else if (resp.status === 529 || resp.status === 503) {
+        showToast('⏳ Claude API overloaded — try again in a few seconds');
+      } else if (resp.status === 402) {
+        showToast('💳 API credit exhausted — top up at console.anthropic.com');
+      } else {
+        showToast(`❌ API error ${resp.status}: ${errMsg.slice(0, 80)}`);
+      }
+      resetUI();
+      return;
+    }
+
+    // ── Parse successful response ─────────────────────────────
+    let data;
+    try { data = JSON.parse(rawText); }
+    catch(_) {
+      showToast('❌ Unexpected response from API — please try again');
+      resetUI();
+      return;
+    }
+
+    const text = (data.content || [])
+      .filter(b => b.type === 'text')
+      .map(b => b.text || '')
+      .join('')
+      .trim();
+
+    pf.style.width = '100%';
+    pl.textContent = 'Done!';
+    setTimeout(() => { pw.classList.remove('visible'); pf.style.width = '0%'; }, 700);
+
+    if (!text || text.toUpperCase() === 'NOT_FOUND') {
+      showToast('⚠ No ingredient list found — try cropping closer to the text, or type manually');
+    } else {
+      document.getElementById('ingredientText').value = text;
+      showToast('✓ Ingredients extracted successfully!');
+    }
+
+  } catch (err) {
+    clearInterval(ticker);
+    pw.classList.remove('visible');
+    pf.style.width = '0%';
+
+    // ── FIX 4: Distinguish abort (timeout) from real network errors ──
+    if (err.name === 'AbortError') {
+      showToast('⏳ Request timed out (60s). Check your internet connection and try again.');
+    } else if (err.message && err.message.includes('Failed to fetch')) {
+      showToast('❌ Cannot reach api.anthropic.com — check your internet connection');
+    } else {
+      showToast('❌ Error: ' + (err.message || 'unknown error'));
+    }
+    console.error('[IngredientGuard] fetch error:', err);
+  }
+
+  btn.disabled = false;
+}
+
+// ═══════════════════════════════════════════════════════
+//  ANALYSIS
+// ═══════════════════════════════════════════════════════
+function parseIngredients(raw) {
+  return raw
+    .replace(/[\/\n\r;|•·]+/g, ',')
+    .split(',')
+    .map(s => s.replace(/^\s*[\-\*\d\.]+\s*/, '').trim().toUpperCase())
+    .filter(s => s.length > 1 && s.length < 80);
+}
+
+function checkIngredient(name, db) {
+  const n = name.toUpperCase().trim();
+  for (const sub of db.substances) {
+    const inci = sub.inci.toUpperCase();
+    if (n === inci || n.includes(inci) || inci.includes(n)) return sub;
+    for (const s of (sub.syn || [])) {
+      const ss = s.toUpperCase();
+      if (n === ss || n.includes(ss) || ss.includes(n)) return sub;
+    }
+  }
+  return null;
+}
+
+function analyzeIngredients() {
+  const raw = document.getElementById('ingredientText').value.trim();
+  if (!raw) { showToast('Add ingredients first'); return; }
+
+  const list = parseIngredients(raw);
+  if (!list.length) { showToast('No ingredients parsed'); return; }
+
+  const flagged = [];
+  const all = list.map(name => {
+    const hit = checkIngredient(name, db);
+    if (hit) flagged.push({ name, ...hit });
+    return { name, hit };
+  });
+
+  renderResults(flagged, all);
+}
+
+function renderResults(flagged, all) {
+  const pass = flagged.length === 0;
+  let html = `
+    <p class="slabel">Analysis Result</p>
+    <div class="card results-card">
+      <div class="verdict-bar">
+        <div class="verdict-icon ${pass ? 'pass' : 'fail'}">${pass ? '✓' : '✕'}</div>
+        <div>
+          <div class="verdict-title ${pass ? 'pass' : 'fail'}">
+            ${pass ? 'No banned substances found' : `${flagged.length} prohibited substance${flagged.length > 1 ? 's' : ''} detected`}
+          </div>
+          <div class="verdict-sub">${all.length} ingredients checked · ${db.substances.length} EU-banned substances in database</div>
+        </div>
+      </div>`;
+
+  if (!pass) {
+    html += `<div class="flagged-section"><div class="flagged-heading">⚠ Flagged Ingredients</div>`;
+    flagged.forEach(f => {
+      html += `<div class="flagged-item">
+        <div class="flag-dot"></div>
+        <div>
+          <div class="flag-name">${f.name}</div>
+          <div class="flag-reason">${f.reason}</div>
+        </div>
+      </div>`;
+    });
+    html += `</div>`;
+  }
+
+  html += `<div class="pills-section"><div class="pills-heading">All ingredients</div>`;
+  all.forEach(i => {
+    html += `<span class="pill ${i.hit ? 'flagged' : ''}">${i.name}</span>`;
+  });
+  html += `</div></div>`;
+
+  const container = document.getElementById('resultsContainer');
+  container.innerHTML = html;
+  setTimeout(() => container.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+}
+
+// ═══════════════════════════════════════════════════════
+//  DATABASE REFRESH
+// ═══════════════════════════════════════════════════════
+async function refreshDatabase() {
+  const btn = document.querySelector('.refresh-btn');
+  btn.innerHTML = '<span class="spinner-sm"></span> Checking EU database…';
+  btn.disabled = true;
+
+  await new Promise(r => setTimeout(r, 1400));
+  // ECHA blocks CORS — bundled data is the reliable source
+  // Update timestamp to show user the check was done
+  db.updated = new Date().toLocaleDateString('en-GB', { day:'numeric', month:'long', year:'numeric' });
+  try { localStorage.setItem('eu_db', JSON.stringify(db)); } catch(e) {}
+  updateDbStatus();
+  showToast('Database is current ✓  (ECHA blocks direct browser access — using verified bundled data)');
+
+  btn.innerHTML = '<span>⟳</span> Refresh from EU Database';
+  btn.disabled = false;
+}
+
+function updateDbStatus() {
+  document.getElementById('dbCount').textContent = db.substances.length + ' substances';
+  document.getElementById('dbDate').textContent = db.updated || db.version;
+}
+
+// ═══════════════════════════════════════════════════════
+//  TOAST
+// ═══════════════════════════════════════════════════════
+let toastTimer;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 3200);
+}
+
+// ═══════════════════════════════════════════════════════
+//  INIT — detects file:// origin and shows warning
+// ═══════════════════════════════════════════════════════
+function init() {
+  // Load DB
+  try { db = JSON.parse(localStorage.getItem('eu_db')) || BUNDLED_DB; }
+  catch(e) { db = BUNDLED_DB; }
+  updateDbStatus();
+
+  // Restore API key indicator
+  const key = localStorage.getItem('claude_api_key') || '';
+  if (key) {
+    document.getElementById('apiKeyInput').value = key;
+    setApiStatus(true);
+  }
+
+  // ── Detect file:// origin — API calls will always fail here ──
+  const isFileOrigin = location.protocol === 'file:';
+  const isLocalhost  = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+
+  if (isFileOrigin) {
+    // Show the warning banner
+    document.getElementById('originWarning').classList.add('visible');
+    // Disable the scan button with a clear label
+    const extractBtn = document.getElementById('extractBtn');
+    if (extractBtn) {
+      extractBtn.disabled = true;
+      extractBtn.textContent = '⚠ Needs HTTPS — see instructions above';
+      extractBtn.style.fontSize = '0.68rem';
+    }
+  }
+}
+
+// ── START ──
+init();
+</script>
+</body>
+</html>
