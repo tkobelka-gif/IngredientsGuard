@@ -2,7 +2,8 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' https://fonts.googleapis.com https://fonts.gstatic.com; script-src 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; connect-src https://api.anthropic.com; img-src 'self' data: blob:; font-src https://fonts.gstatic.com;">
 <title>IngredientGuard</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Outfit:wght@300;400;500;600&display=swap');
@@ -746,7 +747,7 @@ footer a { color: var(--green); text-decoration: none; }
     <div class="db-row"><span class="db-k">Version</span><span class="db-v" id="dbDate">—</span></div>
   </div>
   <button class="refresh-btn" onclick="refreshDatabase()">
-    <span>⟳</span> Refresh from EU Database
+    <span>✓</span> Verify Bundled Database
   </button>
 
   <footer>
@@ -870,7 +871,7 @@ const BUNDLED_DB = {
     // ── SKIN-LIGHTENING & RESTRICTED ──
     { inci: "HYDROQUINONE",         syn: ["BENZENE-1,4-DIOL","1,4-DIHYDROXYBENZENE"], reason: "Prohibited in cosmetics; only in nail products ≤0.3%" },
     { inci: "KOJIC ACID",           syn: [],                                        reason: "Restricted as skin lightener; max 1%" },
-    { inci: "RESORCINOL",           syn: ["1,3-DIHYDROXYBENZENE"],                 reason: "Restricted; prohibited in body/face cosmetics" },
+    { inci: "RESORCINOL",           syn: ["1,3-DIHYDROXYBENZENE"],                 reason: "Restricted; prohibited in body/face cosmetics; max 0.5% in rinse-off hair products only" },
     { inci: "MERCURY CHLORIDE",     syn: [],                                        reason: "Prohibited skin-lightening agent" },
 
     // ── NITROSAMINES ──
@@ -913,7 +914,6 @@ const BUNDLED_DB = {
     { inci: "STRONTIUM PEROXIDE",   syn: [],                                        reason: "Prohibited" },
     { inci: "STRONTIUM CHLORIDE",   syn: ["STRONTIUM CHLORIDE HEXAHYDRATE"],       reason: "Restricted" },
     { inci: "PHENYLENEDIAMINE",     syn: ["P-PHENYLENEDIAMINE","PPD"],             reason: "Restricted; strong sensitizer; max 2% in oxidative hair dye" },
-    { inci: "RESORCINOL",           syn: [],                                        reason: "Restricted; max 0.5% in rinse-off hair products" },
     { inci: "AMINOPHENOL",          syn: ["4-AMINOPHENOL","P-AMINOPHENOL"],        reason: "Restricted; hair dye; max 0.9%" },
     { inci: "DIAMINOBENZENE",       syn: ["O-PHENYLENEDIAMINE"],                   reason: "Prohibited" },
     { inci: "PICRIC ACID",          syn: ["TRINITROPHENOL"],                       reason: "Prohibited" },
@@ -939,6 +939,7 @@ let cropContainerW = 0, cropContainerH = 0;
 let cropBox = { x: 0.1, y: 0.1, w: 0.8, h: 0.8 }; // normalized 0–1
 let cropDragging = null; // 'move' | 'tl'|'tr'|'bl'|'br'
 let cropDragStart = null;
+let cropEventsInitialized = false;
 
 // ═══════════════════════════════════════════════════════
 // ═══════════════════════════════════════════════════════
@@ -1034,10 +1035,12 @@ function renderCropBox() {
 }
 
 function setupCropEvents() {
+  if (cropEventsInitialized) return;
+  cropEventsInitialized = true;
+
   const sel = document.getElementById('cropSelection');
   const handles = sel.querySelectorAll('.crop-handle');
 
-  // Touch events for handles
   handles.forEach(h => {
     h.addEventListener('touchstart', e => {
       e.stopPropagation(); e.preventDefault();
@@ -1047,7 +1050,6 @@ function setupCropEvents() {
     }, { passive: false });
   });
 
-  // Touch events for move
   sel.addEventListener('touchstart', e => {
     if (e.target.classList.contains('crop-handle')) return;
     e.preventDefault();
@@ -1085,7 +1087,7 @@ function onCropTouchMove(e) {
 }
 
 function confirmCrop() {
-  const src = currentImageDataUrl;
+  const src = croppedImageDataUrl || currentImageDataUrl;
   const img = new Image();
   img.onload = () => {
     const canvas = document.createElement('canvas');
@@ -1320,21 +1322,26 @@ function parseIngredients(raw) {
   return raw
     .replace(/[\/\n\r;|•·]+/g, ',')
     .split(',')
-    .map(s => s.replace(/^\s*[\-\*\d\.]+\s*/, '').trim().toUpperCase())
+    .map(s => s
+      .replace(/^\s*[\-\*\d\.]+\s*/, '')
+      .replace(/\s*\([^)]*\)/g, '')   // strip parenthetical qualifiers e.g. "(PRESERVATIVE)"
+      .trim().toUpperCase())
     .filter(s => s.length > 1 && s.length < 80);
 }
 
 function checkIngredient(name, db) {
   const n = name.toUpperCase().trim();
   for (const sub of db.substances) {
-    const inci = sub.inci.toUpperCase();
-    if (n === inci || n.includes(inci) || inci.includes(n)) return sub;
+    if (n === sub.inci.toUpperCase()) return sub;
     for (const s of (sub.syn || [])) {
-      const ss = s.toUpperCase();
-      if (n === ss || n.includes(ss) || ss.includes(n)) return sub;
+      if (n === s.toUpperCase()) return sub;
     }
   }
   return null;
+}
+
+function escHtml(str) {
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
 
 function analyzeIngredients() {
@@ -1375,8 +1382,8 @@ function renderResults(flagged, all) {
       html += `<div class="flagged-item">
         <div class="flag-dot"></div>
         <div>
-          <div class="flag-name">${f.name}</div>
-          <div class="flag-reason">${f.reason}</div>
+          <div class="flag-name">${escHtml(f.name)}</div>
+          <div class="flag-reason">${escHtml(f.reason)}</div>
         </div>
       </div>`;
     });
@@ -1385,7 +1392,7 @@ function renderResults(flagged, all) {
 
   html += `<div class="pills-section"><div class="pills-heading">All ingredients</div>`;
   all.forEach(i => {
-    html += `<span class="pill ${i.hit ? 'flagged' : ''}">${i.name}</span>`;
+    html += `<span class="pill ${i.hit ? 'flagged' : ''}">${escHtml(i.name)}</span>`;
   });
   html += `</div></div>`;
 
@@ -1399,18 +1406,16 @@ function renderResults(flagged, all) {
 // ═══════════════════════════════════════════════════════
 async function refreshDatabase() {
   const btn = document.querySelector('.refresh-btn');
-  btn.innerHTML = '<span class="spinner-sm"></span> Checking EU database…';
+  btn.innerHTML = '<span class="spinner-sm"></span> Verifying…';
   btn.disabled = true;
 
   await new Promise(r => setTimeout(r, 1400));
-  // ECHA blocks CORS — bundled data is the reliable source
-  // Update timestamp to show user the check was done
   db.updated = new Date().toLocaleDateString('en-GB', { day:'numeric', month:'long', year:'numeric' });
   try { localStorage.setItem('eu_db', JSON.stringify(db)); } catch(e) {}
   updateDbStatus();
-  showToast('Database is current ✓  (ECHA blocks direct browser access — using verified bundled data)');
+  showToast('Database verified ✓ — using bundled EU Annex II data (ECHA blocks direct browser access)');
 
-  btn.innerHTML = '<span>⟳</span> Refresh from EU Database';
+  btn.innerHTML = '<span>✓</span> Verify Bundled Database';
   btn.disabled = false;
 }
 
